@@ -2,7 +2,7 @@
 pptx-surgeon
 ============
 
-**PowerPoint OpenXML File Surgeon**
+**Microsoft PowerPoint OpenXML File Surgeon**
 
 <p/>
 <img src="https://nodei.co/npm/pptx-surgeon.png?downloads=true&stars=true" alt=""/>

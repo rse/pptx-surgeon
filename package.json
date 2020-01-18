@@ -1,7 +1,7 @@
 {
     "name":                       "pptx-surgeon",
     "homepage":                   "http://github.com/rse/pptx-surgeon",
-    "description":                "PowerPoint OpenXML File Surgeon",
+    "description":                "Microsoft PowerPoint OpenXML File Surgeon",
     "version":                    "0.9.0",
     "license":                    "MIT",
     "author": {
