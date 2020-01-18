@@ -33,12 +33,10 @@ const fs          = require("fs").promises
 /*  external requirements  */
 const yargs       = require("yargs")
 const chalk       = require("chalk")
-const execa       = require("execa")
 const stripAnsi   = require("strip-ansi")
 const JSZip       = require("jszip")
 const Tmp         = require("tmp")
 const mkdirp      = require("mkdirp")
-const xmlformat   = require("xml-formatter")
 const slimdom     = require("slimdom")
 const slimdomSAX  = require("slimdom-sax-parser")
 const fontoxpath  = require("fontoxpath")
@@ -83,7 +81,7 @@ const fontoxpath  = require("fontoxpath")
 
     /*  create temporary filesystem area  */
     const tmp = Tmp.dirSync()
-    let tmpdir = opts.keep ? pptxfile + ".d" : tmp.name
+    const tmpdir = opts.keep ? pptxfile + ".d" : tmp.name
     log(1, `creating temporary directory ${chalk.blue(tmpdir)}`)
 
     /*
@@ -94,15 +92,15 @@ const fontoxpath  = require("fontoxpath")
     log(1, "unpacking PPTX content")
     let data = await fs.readFile(pptxfile, { encoding: null })
     log(1, `read PPTX file ${chalk.blue(pptxfile)}: ${data.length} bytes`)
-    let zip = new JSZip()
+    const zip = new JSZip()
     log(1, `parsing PPTX file ${chalk.blue(pptxfile)}`)
-    let contents = await zip.loadAsync(data)
+    const contents = await zip.loadAsync(data)
     let manifest = []
-    for (filename of Object.keys(contents.files)) {
-        let file = zip.file(filename)
-        let content = await file.async("nodebuffer")
-        let filepath = `${tmpdir}/${filename}`
-        let filedir = path.dirname(filepath)
+    for (const filename of Object.keys(contents.files)) {
+        const file = zip.file(filename)
+        const content = await file.async("nodebuffer")
+        const filepath = `${tmpdir}/${filename}`
+        const filedir = path.dirname(filepath)
         await mkdirp.sync(filedir, { mode: 0o755 })
         await fs.writeFile(`${tmpdir}/${filename}`, content, { encoding: null })
         manifest.push(filename)
@@ -115,9 +113,9 @@ const fontoxpath  = require("fontoxpath")
 
     /*  helper functions for XML manipulation  */
     const xmlLoad = async (filename) => {
-        let xml = await fs.readFile(filename, { encoding: "utf8" })
+        const xml = await fs.readFile(filename, { encoding: "utf8" })
         log(2, `loading PPTX part ${chalk.blue(filename)}: ${xml.length} bytes`)
-        let dom = slimdomSAX.sync(xml, { position: false })
+        const dom = slimdomSAX.sync(xml, { position: false })
         let m
         if ((m = xml.match(/^(<\?xml.+?\?>\r?\n)/)) !== null)
             dom.PI = m[1]
@@ -143,7 +141,7 @@ const fontoxpath  = require("fontoxpath")
         return result
     }
     const xmlEdit = async (dom, expr, options = {}) => {
-        let result = await fontoxpath.evaluateUpdatingExpression(expr, dom)
+        const result = await fontoxpath.evaluateUpdatingExpression(expr, dom)
         fontoxpath.executePendingUpdateList(result.pendingUpdateList)
     }
     const xmlSave = async (dom, filename) => {
@@ -156,7 +154,7 @@ const fontoxpath  = require("fontoxpath")
 
     /*  helper function for determining files of OpenXML  */
     const partsOfType = async (type, single = false) => {
-        let xml = await xmlLoad(`${tmpdir}/[Content_Types].xml`)
+        const xml = await xmlLoad(`${tmpdir}/[Content_Types].xml`)
         let result = xmlQuery(xml, `
             // Override [
                 @ContentType = 'application/vnd.openxmlformats-officedocument.${type}+xml'
@@ -176,18 +174,18 @@ const fontoxpath  = require("fontoxpath")
      */
 
     /*  load presentation main XML  */
-    let mainxml = await partsOfType("presentationml.presentation.main", true)
+    const mainxml = await partsOfType("presentationml.presentation.main", true)
     let xml = await xmlLoad(`${tmpdir}/${mainxml}`)
-    let ettf = xmlQuery(xml, "/ p:presentation / @embedTrueTypeFonts", { single: true, type: "string" })
+    const ettf = xmlQuery(xml, "/ p:presentation / @embedTrueTypeFonts", { single: true, type: "string" })
     if (ettf)
         log(1, `PPTX: global flag: embedTrueTypeFonts="${ettf}"`)
-    let efs = xmlQuery(xml, "// p:embeddedFontLst / p:embeddedFont")
-    for (ef of efs) {
-        let tf = xmlQuery(ef, ". / p:font / @typeface", { single: true, type: "string" })
+    const efs = xmlQuery(xml, "// p:embeddedFontLst / p:embeddedFont")
+    for (const ef of efs) {
+        const tf = xmlQuery(ef, ". / p:font / @typeface", { single: true, type: "string" })
         if (tf) {
-            let styleNames = [ "regular", "bold", "italic", "boldItalic" ]
-            for (styleName of styleNames) {
-                let id = xmlQuery(ef, `. / p:${styleName} / @r:id`, { single: true, type: "string" })
+            const styleNames = [ "regular", "bold", "italic", "boldItalic" ]
+            for (const styleName of styleNames) {
+                const id = xmlQuery(ef, `. / p:${styleName} / @r:id`, { single: true, type: "string" })
                 if (id)
                     log(1, `PPTX: embedded font: typeface=${tf}, style=${styleName}, id=${id}`)
             }
@@ -195,47 +193,47 @@ const fontoxpath  = require("fontoxpath")
     }
 
     /*  load relationships XML  */
-    let rel = mainxml.replace(/^(.*\/)([^\/]+)$/, "$1_rels/$2.rels")
+    const rel = mainxml.replace(/^(.*\/)([^/]+)$/, "$1_rels/$2.rels")
     xml = await xmlLoad(`${tmpdir}/${rel}`)
-    let rels = xmlQuery(xml, `
+    const rels = xmlQuery(xml, `
         / Relationships
         / Relationship [
             @Type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/font"
         ]
     `)
-    for (let rel of rels) {
-        let id     = xmlQuery(rel, ". / @Id",     { single: true, type: "string" })
-        let target = xmlQuery(rel, ". / @Target", { single: true, type: "string" })
+    for (const rel of rels) {
+        const id     = xmlQuery(rel, ". / @Id",     { single: true, type: "string" })
+        const target = xmlQuery(rel, ". / @Target", { single: true, type: "string" })
         log(1, `PPTX: font relationship: id=${id}, target=${target}`)
     }
 
     /*  load document property XML  */
-    let prop = await partsOfType("extended-properties", true)
+    const prop = await partsOfType("extended-properties", true)
     xml = await xmlLoad(`${tmpdir}/${prop}`)
-    let titles = xmlQuery(xml, `
+    const titles = xmlQuery(xml, `
         / Properties
         / TitlesOfParts
         / vt:vector
         / vt:lpstr
     `, { type: "string" })
-    for (let title of titles)
+    for (const title of titles)
         log(1, `PPTX: document property part: title=${title}`)
 
     /*  load theme XML  */
-    let themes = await partsOfType("theme")
-    let T = {}
-    for (theme of themes) {
-        let xml = await xmlLoad(`${tmpdir}/${theme}`)
-        let combis = [
+    const themes = await partsOfType("theme")
+    const T = {}
+    for (const theme of themes) {
+        const xml = await xmlLoad(`${tmpdir}/${theme}`)
+        const combis = [
             { id: "+mj-lt", section: "a:majorFont", type: "a:latin" },
             { id: "+mj-ea", section: "a:majorFont", type: "a:ea" },
             { id: "+mj-cs", section: "a:majorFont", type: "a:cs" },
             { id: "+mn-lt", section: "a:minorFont", type: "a:latin" },
             { id: "+mn-ea", section: "a:minorFont", type: "a:ea" },
-            { id: "+mn-cs", section: "a:minorFont", type: "a:cs" },
+            { id: "+mn-cs", section: "a:minorFont", type: "a:cs" }
         ]
         for (const combi of combis) {
-            let tf = xmlQuery(xml, `// a:fontScheme / ${combi.section} / ${combi.type} / @typeface`,
+            const tf = xmlQuery(xml, `// a:fontScheme / ${combi.section} / ${combi.type} / @typeface`,
                 { single: true, type: "string" })
             if (tf !== undefined)
                 T[combi.id] = tf
@@ -249,14 +247,14 @@ const fontoxpath  = require("fontoxpath")
     })
 
     /*  load slide master and slide XMLs  */
-    let types = [ "slideMaster", "slide" ]
-    for (type of types) {
-        let idx = {}
-        let slides = await partsOfType(`presentationml.${type}`)
-        for (slide of slides) {
+    const types = [ "slideMaster", "slide" ]
+    for (const type of types) {
+        const idx = {}
+        const slides = await partsOfType(`presentationml.${type}`)
+        for (const slide of slides) {
             xml = await xmlLoad(`${tmpdir}/${slide}`)
-            let tfs = xmlQuery(xml, `// * [ @typeface ] / @typeface`, { type: "string" })
-            for (tf of tfs) {
+            const tfs = xmlQuery(xml, "// * [ @typeface ] / @typeface", { type: "string" })
+            for (const tf of tfs) {
                 if (idx[tf] === undefined)
                     idx[tf] = 0
                 idx[tf]++
@@ -278,30 +276,30 @@ const fontoxpath  = require("fontoxpath")
         log(1, "remove font embedding information")
 
         /*  edit presentation main XML  */
-        let mainxml = await partsOfType("presentationml.presentation.main", true)
+        const mainxml = await partsOfType("presentationml.presentation.main", true)
         let xml = await xmlLoad(`${tmpdir}/${mainxml}`)
         await xmlEdit(xml, "delete node / p:presentation / @embedTrueTypeFonts")
         await xmlEdit(xml, "delete node // p:embeddedFontLst")
         await xmlSave(xml, `${tmpdir}/${mainxml}`)
 
         /*  edit relationships XML  */
-        let relfile = mainxml.replace(/^(.*\/)([^\/]+)$/, "$1_rels/$2.rels")
+        const relfile = mainxml.replace(/^(.*\/)([^/]+)$/, "$1_rels/$2.rels")
         xml = await xmlLoad(`${tmpdir}/${relfile}`)
-        let rels = xmlQuery(xml, `
+        const rels = xmlQuery(xml, `
             / Relationships
             / Relationship [
                 @Type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/font"
             ]
         `)
-        for (let rel of rels) {
+        for (const rel of rels) {
             await xmlEdit(rel, "delete node .")
             let target = xmlQuery(rel, ". / @Target", { type: "string", single: true })
             target = target.replace(/^\//, "")
-            let file = path.resolve(path.dirname(`${tmpdir}/${mainxml}`), target)
-            let base = path.resolve(tmpdir)
+            const file = path.resolve(path.dirname(`${tmpdir}/${mainxml}`), target)
+            const base = path.resolve(tmpdir)
             if (!(file.length >= base.length && file.substr(0, base.length) === base))
                 throw new Error("fatal error")
-            let part = file.substr(base.length).replace(/^\//, "")
+            const part = file.substr(base.length).replace(/^\//, "")
             log(2, `removing PPTX part ${chalk.blue(part)}`)
             await fs.unlink(file)
             manifest = manifest.filter((filename) => filename !== part)
@@ -318,19 +316,19 @@ const fontoxpath  = require("fontoxpath")
         log(1, "map font name information")
 
         /*  prune theme XML files  */
-        let themes = await partsOfType("theme")
-        for (theme of themes) {
-            let xml = await xmlLoad(`${tmpdir}/${theme}`)
-            let sections = [ "a:majorFont", "a:minorFont "]
-            let types = [ "a:latin", "a:ea", "a:cs", "a:font" ]
-            for (section of sections) {
-                for (type of types) {
-                    for (fontmapname of opts.fontMapName) {
-                        let m = fontmapname.match(/^(.+)=(.+)$/)
+        const themes = await partsOfType("theme")
+        for (const theme of themes) {
+            const xml = await xmlLoad(`${tmpdir}/${theme}`)
+            const sections = [ "a:majorFont", "a:minorFont "]
+            const types = [ "a:latin", "a:ea", "a:cs", "a:font" ]
+            for (const section of sections) {
+                for (const type of types) {
+                    for (const fontmapname of opts.fontMapName) {
+                        const m = fontmapname.match(/^(.+)=(.+)$/)
                         if (m == null)
                             throw new Error("invalid font mapping syntax")
-                        let [ , valold, valnew ] = m
-                        let xquf = `
+                        const [ , valold, valnew ] = m
+                        const xquf = `
                             for $n in // a:fontScheme / ${section} / ${type} [ @typeface = "${valold}" ]
                             return replace value of node $n / @typeface with "${valnew}"
                         `
@@ -342,17 +340,17 @@ const fontoxpath  = require("fontoxpath")
         }
 
         /*  prune slide master and slide XML files  */
-        let types = [ "slideMaster", "slide" ]
-        for (type of types) {
-            let slides = await partsOfType(`presentationml.${type}`)
-            for (slide of slides) {
+        const types = [ "slideMaster", "slide" ]
+        for (const type of types) {
+            const slides = await partsOfType(`presentationml.${type}`)
+            for (const slide of slides) {
                 xml = await xmlLoad(`${tmpdir}/${slide}`)
-                for (fontmapname of opts.fontMapName) {
-                    let m = fontmapname.match(/^(.+)=(.+)$/)
+                for (const fontmapname of opts.fontMapName) {
+                    const m = fontmapname.match(/^(.+)=(.+)$/)
                     if (m == null)
                         throw new Error("invalid font mapping syntax")
-                    let [ , valold, valnew ] = m
-                    let xquf = `
+                    const [ , valold, valnew ] = m
+                    const xquf = `
                         for $n in // * [ @typeface = "${valold}" ]
                         return replace value of node $n / @typeface with "${valnew}"
                     `
@@ -369,9 +367,9 @@ const fontoxpath  = require("fontoxpath")
 
     /*  write PPTX file (which actually is just the packing of a ZIP format file)  */
     log(1, "packing PPTX content")
-    nzip = new JSZip()
-    for (filename of manifest) {
-        let content = await fs.readFile(`${tmpdir}/${filename}`, { encoding: null })
+    const nzip = new JSZip()
+    for (const filename of manifest) {
+        const content = await fs.readFile(`${tmpdir}/${filename}`, { encoding: null })
         log(2, `storing PPTX part ${chalk.blue(filename)}: ${content.length} bytes`)
         nzip.file(filename, content, {
             date:            zip.file(filename).date,
@@ -394,8 +392,8 @@ const fontoxpath  = require("fontoxpath")
     /*  delete temporary filesystem area  */
     tmp.removeCallback()
 
+    /*  gracefully terminate  */
     process.exit(0)
-
 })().catch((err) => {
     /*  fatal error  */
     process.stderr.write(`pptx-surgeon: ${chalk.red("ERROR:")} ${err.stack}\n`)
