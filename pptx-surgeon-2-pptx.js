@@ -99,8 +99,8 @@ module.exports = class Archive {
         const base = path.resolve(this.basedir)
         if (!(file.length >= base.length && file.substr(0, base.length) === base))
             throw new Error("fatal internal error: part not under base directory")
-        const stats = await fs.stat(file)
-        return stats ? stats.size : -1
+        const stats = await (fs.stat(file).catch(() => undefined))
+        return (stats ? stats.size : 0)
     }
 
     /*  delete OpenXML part  */
@@ -111,7 +111,7 @@ module.exports = class Archive {
             throw new Error("fatal internal error: part not under base directory")
         const part = file.substr(base.length).replace(/^\//, "")
         this.options.log(2, `removing PPTX part ${chalk.blue(part)}`)
-        await fs.unlink(file)
+        await (fs.unlink(file).catch(() => undefined))
         this.manifest = this.manifest.filter((filename) => filename !== part)
     }
 
