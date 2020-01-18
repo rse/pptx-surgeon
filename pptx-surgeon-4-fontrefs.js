@@ -70,9 +70,9 @@ module.exports = class FontEmbed {
                 this.options.log(1, `PPTX: theme font mapping: ${chalk.blue(entry)}`)
             })
 
-        /*  load slide master and slide XMLs  */
+        /*  load slide layout, slide master and slide XMLs  */
         info.fontRefs = {}
-        const types = [ "slideMaster", "slide" ]
+        const types = [ "slideLayout", "slideMaster", "slide" ]
         for (const type of types) {
             info.fontRefs[type] = {}
             const slides = await this.options.pptx.parts(`presentationml.${type}`)
@@ -101,7 +101,7 @@ module.exports = class FontEmbed {
     async map (mappings) {
         this.options.log(1, "map font references")
 
-        /*  prune theme XML files  */
+        /*  patch theme XML files  */
         const themes = await this.options.pptx.parts("theme")
         for (const theme of themes) {
             const xml = await this.options.xml.load(`${this.options.pptx.basedir}/${theme}`)
@@ -118,8 +118,8 @@ module.exports = class FontEmbed {
             await this.options.xml.save(xml, `${this.options.pptx.basedir}/${theme}`)
         }
 
-        /*  prune slide master and slide XML files  */
-        const types = [ "slideMaster", "slide" ]
+        /*  patch slide layout, slide master and slide XML files  */
+        const types = [ "slideLayout", "slideMaster", "slide" ]
         for (const type of types) {
             const slides = await this.options.pptx.parts(`presentationml.${type}`)
             for (const slide of slides) {

@@ -175,14 +175,11 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
             if (font !== "" && !fontKeep[font])
                 mappings[font] = fontPrimary
         }
-        for (const font of Object.keys(info2.fontRefs.slideMaster)) {
-            if (font !== "" && !font.match(/^\+m[jn]-.+/) && !fontKeep[font])
-                mappings[font] = fontPrimary
-        }
-        for (const font of Object.keys(info2.fontRefs.slide)) {
-            if (font !== "" && !font.match(/^\+m[jn]-.+/) && !fontKeep[font])
-                mappings[font] = fontPrimary
-        }
+        const types = [ "slideLayout", "slideMaster", "slide" ]
+        for (const type of types)
+            for (const font of Object.keys(info2.fontRefs[type]))
+                if (font !== "" && !font.match(/^\+m[jn]-.+/) && !fontKeep[font])
+                    mappings[font] = fontPrimary
         mappings = Object.keys(mappings).map((from) => ({ from, to: mappings[from] }))
         await fontrefs.map(mappings)
         modified = true
