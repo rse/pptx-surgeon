@@ -57,6 +57,24 @@ $ pptx-surgeon \
   <pptx-file>
 ```
 
+Examples
+--------
+
+```
+# show all font information
+$ pptx-surgeon -d sample.pptx
+
+# patch PPTX by removing font embeddings
+$ pptx-surgeon -r -o sample-patched.pptx sample.pptx
+
+# patch PPTX by mapping font names
+$ pptx-surgeon -m "Arial=msg CI Text" -o sample-patched.pptx sample.pptx
+
+# patch PPTX by performing an all-in-one cleanup
+$ pptx-surgeon -c "msg CI Text,msg CI Signal,msg CS Code,msg CS Note" \
+  -o sample-patched.pptx sample.pptx
+```
+
 License
 -------
 
