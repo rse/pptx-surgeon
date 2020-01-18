@@ -72,7 +72,7 @@ module.exports = class FontEmbed {
 
         /*  load slide layout, slide master and slide XMLs  */
         info.fontRefs = {}
-        const types = [ "slideLayout", "slideMaster", "slide" ]
+        const types = [ "slideLayout", "slideMaster", "slide", "notesMaster", "notesSlide" ]
         for (const type of types) {
             info.fontRefs[type] = {}
             const slides = await this.options.pptx.parts(`presentationml.${type}`)
@@ -119,7 +119,7 @@ module.exports = class FontEmbed {
         }
 
         /*  patch slide layout, slide master and slide XML files  */
-        const types = [ "slideLayout", "slideMaster", "slide" ]
+        const types = [ "slideLayout", "slideMaster", "slide", "notesMaster", "notesSlide" ]
         for (const type of types) {
             const slides = await this.options.pptx.parts(`presentationml.${type}`)
             for (const slide of slides) {

@@ -175,7 +175,7 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
             if (font !== "" && !fontKeep[font])
                 mappings[font] = fontPrimary
         }
-        const types = [ "slideLayout", "slideMaster", "slide" ]
+        const types = [ "slideLayout", "slideMaster", "slide", "notesMaster", "notesSlide" ]
         for (const type of types)
             for (const font of Object.keys(info2.fontRefs[type]))
                 if (font !== "" && !font.match(/^\+m[jn]-.+/) && !fontKeep[font])
