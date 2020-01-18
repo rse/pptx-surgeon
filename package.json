@@ -67,6 +67,6 @@
         "package:clean":          "rm -f pptx-surgeon-lnx-x64 pptx-surgeon-win-x64.exe pptx-surgeon-mac-x64",
         "generate:man":           "remark --quiet --use remark-man --output pptx-surgeon.1 pptx-surgeon.md",
         "generate:clean":         "rm -f pptx-surgeon.1",
-        "test":                   "node pptx-surgeon.js -v2 -r -m 'msg CI Text=Arial' sample.pptx"
+        "test":                   "node pptx-surgeon.js -v2 -r -m 'msg CI Text=Arial' -o sample-patched.pptx sample.pptx"
     }
 }
