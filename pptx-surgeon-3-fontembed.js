@@ -40,7 +40,7 @@ module.exports = class FontEmbed {
 
     /*  read font embedding information  */
     async read () {
-        let info = {}
+        const info = {}
 
         /*  load presentation main XML  */
         const mainxml = await this.options.pptx.parts("presentationml.presentation.main", true)
@@ -81,8 +81,8 @@ module.exports = class FontEmbed {
             const id     = this.options.xml.query(rel, ". / @Id",     { single: true, type: "string" })
             const target = this.options.xml.query(rel, ". / @Target", { single: true, type: "string" })
             this.options.log(1, `PPTX: font relationship: id=${chalk.blue(id)}, target=${chalk.blue(target)}`)
-            let size = await this.options.pptx.partSize(mainxml, target)
-            let entry = info.fontEmbedList.find((entry) => entry.id === id)
+            const size = await this.options.pptx.partSize(mainxml, target)
+            const entry = info.fontEmbedList.find((entry) => entry.id === id)
             if (entry) {
                 entry.asset = target
                 entry.size  = size

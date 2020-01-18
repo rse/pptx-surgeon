@@ -40,7 +40,7 @@ module.exports = class FontEmbed {
 
     /*  read font reference information  */
     async read () {
-        let info = {}
+        const info = {}
 
         /*  load theme XML  */
         const themes = await this.options.pptx.parts("theme")

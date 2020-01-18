@@ -37,27 +37,68 @@ const FontEmbed   = require("./pptx-surgeon-3-fontembed")
 const FontRefs    = require("./pptx-surgeon-4-fontrefs")
 
 ;(async () => {
-    /* eslint indent: off */
-
     /*  parse command-line options  */
     const opts = yargs()
         .parserConfiguration({
             "set-placeholder-key": true,
             "halt-at-non-option":  true
         })
-        .usage("Usage: pptx-surgeon [-v|--verbose <level>] [-k] [-r|font-remove-embedding] [-m|font-map-name <from>=<to>] <pptx-file>")
-        .option("v", { alias: "verbose", type: "number",  describe: "level of verbose output", nargs: 1, default: 0 })
-        .option("k", { alias: "keep", type: "boolean", describe: "keep expanded PPTX content", default: false })
-        .option("r", { alias: "font-remove-embedding", type: "boolean",  describe: "remove font usages", default: false })
-        .option("m", { alias: "font-map-name", type: "string", describe: "map font", nargs: 1, default: null })
+        .usage(
+            "Usage: pptx-surgeon" +
+            " [-v|--verbose <level>]" +
+            " [-k|--keep-temporary]" +
+            " [-o|--output <pptx-file>]" +
+            " [-d|--font-dump-info]" +
+            " [-r|--font-remove-embed]" +
+            " [-m|--font-map-name <from>=<to>]" +
+            " <pptx-file>"
+        )
+        .option("v", {
+            alias:    "verbose",
+            type:     "number",
+            describe: "level of verbose output",
+            nargs:    1,
+            default:  0
+        })
+        .option("k", {
+            alias:    "keep-temporary",
+            type:     "boolean",
+            describe: "keep expanded PPTX content",
+            default:  false
+        })
+        .option("o", {
+            alias:    "output",
+            type:     "string",
+            describe: "output file",
+            default:  ""
+        })
+        .option("d", {
+            alias:    "font-dump",
+            type:     "boolean",
+            describe: "dump font information",
+            default:  false
+        })
+        .option("r", {
+            alias:    "font-remove-embed",
+            type:     "boolean",
+            describe: "remove font embeddings",
+            default:  false
+        })
+        .option("m", {
+            alias:    "font-map-name",
+            type:     "string",
+            describe: "map font names",
+            nargs:    1,
+            default:  null
+        })
         .version(false)
         .help(true)
         .showHelpOnFail(true)
         .strict(true)
+        .demand(1)
         .parse(process.argv.slice(2))
-    if (opts._.length !== 1)
-        throw new Error("PPTX file argument missing")
     const pptxfile = opts._[0]
+    const pptxfileOut = opts.output !== "" ? opts.output : pptxfile
 
     /*  helper function for verbose log output  */
     const logLevels = [ "NONE", chalk.blue("INFO"), chalk.yellow("DEBUG") ]
@@ -74,27 +115,23 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
     const xml = new XML({ log })
 
     /*  load PPTX file  */
-    const pptx = new PPTX({
-        log,
-        xml,
-        basedir: opts.keep ? `${pptxfile}.d` : null,
-        keep:    opts.keep,
-        tool:    `pptx-surgeon/${my.version}`
-    })
+    const pptx = new PPTX({ log, xml, keep: opts.keepTemporary, tool: `pptx-surgeon/${my.version}` })
     await pptx.load(pptxfile)
 
     /*  display font embedding information  */
     const fontembed = new FontEmbed({ log, xml, pptx })
-    let info1 = await fontembed.read()
-    process.stdout.write(jsYAML.safeDump(info1, {}))
+    const info1 = await fontembed.read()
+    if (opts.fontDumpInfo)
+        process.stdout.write(jsYAML.safeDump(info1, {}))
 
     /*  display font references  */
     const fontrefs = new FontRefs({ log, xml, pptx })
-    let info2 = await fontrefs.read()
-    process.stdout.write(jsYAML.safeDump(info2, {}))
+    const info2 = await fontrefs.read()
+    if (opts.fontDumpInfo)
+        process.stdout.write(jsYAML.safeDump(info2, {}))
 
     /*  optionally remove font embeddings  */
-    if (opts.fontRemoveEmbedding)
+    if (opts.fontRemoveEmbed)
         await fontembed.delete()
 
     /*  optionally map font  */
@@ -114,8 +151,8 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
     }
 
     /*  save PPTX file  */
-    if (opts.keep)
-        await pptx.save(`${pptxfile}.new`)
+    if (pptxfile !== pptxfileOut)
+        await pptx.save(pptxfileOut)
     else {
         await pptx.backup(pptxfile, `${pptxfile}.bak`)
         await pptx.save(pptxfile)

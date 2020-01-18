@@ -99,7 +99,6 @@ module.exports = class Archive {
         const base = path.resolve(this.basedir)
         if (!(file.length >= base.length && file.substr(0, base.length) === base))
             throw new Error("fatal internal error: part not under base directory")
-        const part = file.substr(base.length).replace(/^\//, "")
         const stats = await fs.stat(file)
         return stats ? stats.size : -1
     }
@@ -150,7 +149,7 @@ module.exports = class Archive {
         await fs.writeFile(pptxfile, data, { encoding: null })
 
         /*  delete temporary filesystem area  */
-        if (this.tmp !== null) {
+        if (this.tmp !== null && !this.options.keep) {
             this.tmp.removeCallback()
             this.tmp = null
         }
