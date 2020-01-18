@@ -40,13 +40,17 @@ module.exports = class FontEmbed {
 
     /*  read font embedding information  */
     async read () {
+        let info = {}
+
         /*  load presentation main XML  */
         const mainxml = await this.options.pptx.parts("presentationml.presentation.main", true)
         let xml = await this.options.xml.load(`${this.options.pptx.basedir}/${mainxml}`)
         const ettf = this.options.xml.query(xml,
             "/ p:presentation / @embedTrueTypeFonts", { single: true, type: "string" })
+        info.fontEmbedFlag = !!ettf
         if (ettf)
             this.options.log(1, `PPTX: global flag: embedTrueTypeFonts="${ettf}"`)
+        info.fontEmbedList = []
         const efs = this.options.xml.query(xml, "// p:embeddedFontLst / p:embeddedFont")
         for (const ef of efs) {
             const tf = this.options.xml.query(ef,
@@ -55,9 +59,11 @@ module.exports = class FontEmbed {
                 const styleNames = [ "regular", "bold", "italic", "boldItalic" ]
                 for (const styleName of styleNames) {
                     const id = this.options.xml.query(ef, `. / p:${styleName} / @r:id`, { single: true, type: "string" })
-                    if (id)
+                    if (id) {
                         this.options.log(1, "PPTX: embedded font: " +
                             `typeface=${chalk.blue(tf)}, style=${chalk.blue(styleName)}, id=${chalk.blue(id)}`)
+                        info.fontEmbedList.push({ typeface: tf, style: styleName, id, asset: null })
+                    }
                 }
             }
         }
@@ -75,19 +81,20 @@ module.exports = class FontEmbed {
             const id     = this.options.xml.query(rel, ". / @Id",     { single: true, type: "string" })
             const target = this.options.xml.query(rel, ". / @Target", { single: true, type: "string" })
             this.options.log(1, `PPTX: font relationship: id=${chalk.blue(id)}, target=${chalk.blue(target)}`)
+            let size = await this.options.pptx.partSize(mainxml, target)
+            let entry = info.fontEmbedList.find((entry) => entry.id === id)
+            if (entry) {
+                entry.asset = target
+                entry.size  = size
+            }
+            else
+                info.fontEmbedList.push({ typeface: null, style: null, id, asset: target, size })
         }
 
-        /*  load document property XML  */
-        const prop = await this.options.pptx.parts("extended-properties", true)
-        xml = await this.options.xml.load(`${this.options.pptx.basedir}/${prop}`)
-        const titles = this.options.xml.query(xml, `
-            / Properties
-            / TitlesOfParts
-            / vt:vector
-            / vt:lpstr
-        `, { type: "string" })
-        for (const title of titles)
-            this.options.log(1, `PPTX: document property part: title=${chalk.blue(title)}`)
+        /*  remove internal ids  */
+        info.fontEmbedList.forEach((entry) => delete entry.id)
+
+        return info
     }
 
     /*  delete font embedding information  */
@@ -114,7 +121,7 @@ module.exports = class FontEmbed {
             await this.options.xml.edit(rel, "delete node .")
             let target = this.options.xml.query(rel, ". / @Target", { type: "string", single: true })
             target = target.replace(/^\//, "")
-            await this.options.pptx.removePart(mainxml, target)
+            await this.options.pptx.partDelete(mainxml, target)
         }
         await this.options.xml.save(xml, `${this.options.pptx.basedir}/${relfile}`)
     }

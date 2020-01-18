@@ -40,9 +40,11 @@ module.exports = class FontEmbed {
 
     /*  read font reference information  */
     async read () {
+        let info = {}
+
         /*  load theme XML  */
         const themes = await this.options.pptx.parts("theme")
-        const T = {}
+        info.fontTheme = {}
         for (const theme of themes) {
             const xml = await this.options.xml.load(`${this.options.pptx.basedir}/${theme}`)
             const combis = [
@@ -58,38 +60,41 @@ module.exports = class FontEmbed {
                     `// a:fontScheme / ${combi.section} / ${combi.type} / @typeface`,
                     { single: true, type: "string" })
                 if (tf !== undefined)
-                    T[combi.id] = tf
+                    info.fontTheme[combi.id] = tf
             }
         }
-        Object.keys(T)
+        Object.keys(info.fontTheme)
             .sort((a, b) => a.localeCompare(b))
-            .map((font) => `${font}=${T[font]}`)
+            .map((font) => `${font}=${info.fontTheme[font]}`)
             .forEach((entry) => {
                 this.options.log(1, `PPTX: theme font mapping: ${chalk.blue(entry)}`)
             })
 
         /*  load slide master and slide XMLs  */
+        info.fontRefs = {}
         const types = [ "slideMaster", "slide" ]
         for (const type of types) {
-            const idx = {}
+            info.fontRefs[type] = {}
             const slides = await this.options.pptx.parts(`presentationml.${type}`)
             for (const slide of slides) {
                 const xml = await this.options.xml.load(`${this.options.pptx.basedir}/${slide}`)
                 const tfs = this.options.xml.query(xml,
                     "// * [ @typeface ] / @typeface", { type: "string" })
                 for (const tf of tfs) {
-                    if (idx[tf] === undefined)
-                        idx[tf] = 0
-                    idx[tf]++
+                    if (info.fontRefs[type][tf] === undefined)
+                        info.fontRefs[type][tf] = 0
+                    info.fontRefs[type][tf]++
                 }
             }
-            Object.keys(idx)
+            Object.keys(info.fontRefs[type])
                 .sort((a, b) => a.localeCompare(b))
-                .map((font) => `${font}=${idx[font]}`)
+                .map((font) => `${font}=${info.fontRefs[type][font]}`)
                 .forEach((entry) => {
                     this.options.log(1, `PPTX: ${type} font usage: ${chalk.blue(entry)}`)
                 })
         }
+
+        return info
     }
 
     /*  delete font reference information  */

@@ -27,6 +27,7 @@
 const yargs       = require("yargs")
 const chalk       = require("chalk")
 const stripAnsi   = require("strip-ansi")
+const jsYAML      = require("js-yaml")
 
 /*  own package information  */
 const my          = require("./package.json")
@@ -84,11 +85,13 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
 
     /*  display font embedding information  */
     const fontembed = new FontEmbed({ log, xml, pptx })
-    await fontembed.read()
+    let info1 = await fontembed.read()
+    process.stdout.write(jsYAML.safeDump(info1, {}))
 
     /*  display font references  */
     const fontrefs = new FontRefs({ log, xml, pptx })
-    await fontrefs.read()
+    let info2 = await fontrefs.read()
+    process.stdout.write(jsYAML.safeDump(info2, {}))
 
     /*  optionally remove font embeddings  */
     if (opts.fontRemoveEmbedding)

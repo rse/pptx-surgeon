@@ -93,8 +93,19 @@ module.exports = class Archive {
         return result
     }
 
-    /*  remove OpenXML part  */
-    async removePart (basePart, target) {
+    /*  determine size of OpenXML part  */
+    async partSize (basePart, target) {
+        const file = path.resolve(path.resolve(this.basedir, path.dirname(basePart)), target)
+        const base = path.resolve(this.basedir)
+        if (!(file.length >= base.length && file.substr(0, base.length) === base))
+            throw new Error("fatal internal error: part not under base directory")
+        const part = file.substr(base.length).replace(/^\//, "")
+        const stats = await fs.stat(file)
+        return stats ? stats.size : -1
+    }
+
+    /*  delete OpenXML part  */
+    async partDelete (basePart, target) {
         const file = path.resolve(path.resolve(this.basedir, path.dirname(basePart)), target)
         const base = path.resolve(this.basedir)
         if (!(file.length >= base.length && file.substr(0, base.length) === base))
