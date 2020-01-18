@@ -38,7 +38,7 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
 
 ;(async () => {
     /*  parse command-line options  */
-    let usage =
+    const usage =
         "Usage: pptx-surgeon" +
         " [-v|--verbose <level>]" +
         " [-k|--keep-temporary]" +
@@ -167,7 +167,7 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
         const fonts = opts.fontCleanup.split(/\s*,\s*/g)
         const fontPrimary = fonts[0]
         const fontKeep = {}
-        fonts.forEach((font) => fontKeep[font] = true)
+        fonts.forEach((font) => { fontKeep[font] = true })
         await fontembed.delete()
         let mappings = {}
         for (const id of Object.keys(info2.fontTheme)) {
