@@ -39,9 +39,17 @@ are "broken" when it comes to fonts:
 Installation
 ------------
 
-```
-$ npm install -g pptx-surgeon
-```
+- download pre-built binary for Windows (x64):<br/>
+  https://github.com/rse/cau/releases/download/0.9.1/pptx-surgeon-win-x64.exe
+
+- download pre-built binary for macOS (x64):<br/>
+  https://github.com/rse/cau/releases/download/0.9.1/pptx-surgeon-mac-x64
+
+- download pre-built binary for GNU/Linux (x64):<br/>
+  https://github.com/rse/cau/releases/download/0.9.1/pptx-surgeon-lnx-x64
+
+- via Node.js/NPM for any platform:<br/>
+  `$ npm install -g pptx-surgeon`
 
 Usage
 -----
