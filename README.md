@@ -13,27 +13,48 @@ pptx-surgeon
 Abstract
 --------
 
-This is a small utility for performing some font-related
-surgical operations on PowerPoint OpenXML files (PPTX).
-PowerPoint as of at least January 2020 sometimes produces
-"broken" PPTX files:
+This is a small utility for performing some font-related surgical
+operations on PowerPoint OpenXML files (PPTX). PowerPoint, as of at least
+January 2020, produces "broken" PPTX files related to fonts:
 
-1. Sometimes it contains some font embedding information,
+1. **Broken Font Embedding**:
+   Sometimes it contains some font embedding information,
    but the actual font data is partially missing and PowerPoint is not
-   willing to correct this through any means of its user interface. For
-   this `pptx-surgeon` provides the option to completely remove all font
-   embedding information which resets the PPTX file back to a consistent
-   state.
+   willing to correct this through any means of its user interface
+   (including disabling and re-enabling the font embedding option or
+   exporting and re-importing via XML format). For this, `pptx-surgeon`
+   provides the possibility to completely remove all font embedding
+   information which resets the PPTX file back to a consistent state
+   (where PowerPoint again is willing to correctly embed the fonts from
+   scratch).
 
-2. Often it contains references to previously used fonts although no
-   user interface reachable shape any longer uses these fonts. For this
-   `pptx-surgeon` provides the option to map font names.
+2. **Hidden Font References**:
+   Often it contains references to previously used fonts, although no
+   user interface reachable shape any longer uses these fonts. For this,
+   `pptx-surgeon` provides the possibility to map font names in both
+   the theme, slide master and slides. This gets rid of the previous
+   references to old fonts.
 
 Installation
 ------------
 
 ```
 $ npm install -g pptx-surgeon
+```
+
+Usage
+-----
+
+```
+$ pptx-surgeon \
+  [-v|--verbose <level>] \
+  [-k|--keep-temporary] \
+  [-o|--output <pptx-file>] \
+  [-d|--font-dump-info] \
+  [-r|--font-remove-embed] \
+  [-m|--font-map-name <name-old>=<name-new>] \
+  [-c|--font-cleanup <name-primary>,<name-secondary>,...] \
+  <pptx-file>
 ```
 
 License
