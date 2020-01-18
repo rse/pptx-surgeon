@@ -45,7 +45,8 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
         " [-o|--output <pptx-file>]" +
         " [-d|--font-dump-info]" +
         " [-r|--font-remove-embed]" +
-        " [-m|--font-map-name <from>=<to>]" +
+        " [-m|--font-map-name <name-old>=<name-new>]" +
+        " [-c|--font-cleanup <name-primary>,<name-secondary>,...]" +
         " <pptx-file>"
     const opts = yargs()
         .parserConfiguration({
@@ -73,7 +74,7 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
             default:  ""
         })
         .option("d", {
-            alias:    "font-dump",
+            alias:    "font-dump-info",
             type:     "boolean",
             describe: "dump font information",
             default:  false
@@ -90,7 +91,13 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
             type:     "string",
             describe: "map font names",
             nargs:    1,
-            default:  null
+            default:  []
+        })
+        .option("c", {
+            alias:    "font-cleanup",
+            type:     "string",
+            describe: "keep only the specified fonts and map all other fonts onto primary font",
+            default:  ""
         })
         .version(false)
         .help(true)
@@ -135,16 +142,16 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
         process.stdout.write(jsYAML.safeDump(info2, {}))
 
     /*  optionally remove font embeddings  */
-    if (opts.fontRemoveEmbed)
+    let modified = false
+    if (opts.fontRemoveEmbed) {
         await fontembed.delete()
+        modified = true
+    }
 
     /*  optionally map font  */
-    if (opts.fontMapName !== null) {
-        let fontMapNames = opts.fontMapName
-        if (typeof fontMapNames === "string")
-            fontMapNames = [ fontMapNames ]
+    if (opts.fontMapName.length > 0) {
         const mappings = []
-        for (const fontMapName of fontMapNames) {
+        for (const fontMapName of opts.fontMapNames) {
             const m = fontMapName.match(/^(.+)=(.+)$/)
             if (m == null)
                 throw new Error("invalid font mapping syntax")
@@ -152,14 +159,43 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
             mappings.push({ from, to })
         }
         await fontrefs.map(mappings)
+        modified = true
+    }
+
+    /*  optionally perform full font cleanup  */
+    if (opts.fontCleanup) {
+        const fonts = opts.fontCleanup.split(/\s*,\s*/g)
+        const fontPrimary = fonts[0]
+        const fontKeep = {}
+        fonts.forEach((font) => fontKeep[font] = true)
+        await fontembed.delete()
+        let mappings = {}
+        for (const id of Object.keys(info2.fontTheme)) {
+            const font = info2.fontTheme[id]
+            if (font !== "" && !fontKeep[font])
+                mappings[font] = fontPrimary
+        }
+        for (const font of Object.keys(info2.fontRefs.slideMaster)) {
+            if (font !== "" && !font.match(/^\+m[jn]-.+/) && !fontKeep[font])
+                mappings[font] = fontPrimary
+        }
+        for (const font of Object.keys(info2.fontRefs.slide)) {
+            if (font !== "" && !font.match(/^\+m[jn]-.+/) && !fontKeep[font])
+                mappings[font] = fontPrimary
+        }
+        mappings = Object.keys(mappings).map((from) => ({ from, to: mappings[from] }))
+        await fontrefs.map(mappings)
+        modified = true
     }
 
     /*  save PPTX file  */
-    if (pptxfile !== pptxfileOut)
-        await pptx.save(pptxfileOut)
-    else {
-        await pptx.backup(pptxfile, `${pptxfile}.bak`)
-        await pptx.save(pptxfile)
+    if (modified) {
+        if (pptxfile !== pptxfileOut)
+            await pptx.save(pptxfileOut)
+        else {
+            await pptx.backup(pptxfile, `${pptxfile}.bak`)
+            await pptx.save(pptxfile)
+        }
     }
 
     /*  gracefully terminate  */
