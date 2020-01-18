@@ -14,8 +14,9 @@ Abstract
 --------
 
 This is a small utility for performing some font-related surgical
-operations on PowerPoint OpenXML files (PPTX). PowerPoint, as of at least
-January 2020, produces "broken" PPTX files related to fonts:
+operations on Microsoft PowerPoint OpenXML files (PPTX). Microsoft
+PowerPoint, as of at least January 2020, can produce PPTX files which
+are "broken" when it comes to fonts:
 
 1. **Broken Font Embedding**:
    Sometimes it contains some font embedding information,
@@ -71,7 +72,8 @@ $ pptx-surgeon -r -o sample-patched.pptx sample.pptx
 $ pptx-surgeon -m "Arial=msg CI Text" -o sample-patched.pptx sample.pptx
 
 # patch PPTX by performing an all-in-one cleanup
-$ pptx-surgeon -c "msg CI Text,msg CI Signal,msg CS Code,msg CS Note" \
+# (the listed fonts are all kept and everything else is mapped to "msg CI Text")
+$ pptx-surgeon -c "msg CI Text,msg CI Signal,msg CS Code,msg CS Note,Wingdings" \
   -o sample-patched.pptx sample.pptx
 ```
 
