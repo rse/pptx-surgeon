@@ -38,21 +38,21 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
 
 ;(async () => {
     /*  parse command-line options  */
+    let usage =
+        "Usage: pptx-surgeon" +
+        " [-v|--verbose <level>]" +
+        " [-k|--keep-temporary]" +
+        " [-o|--output <pptx-file>]" +
+        " [-d|--font-dump-info]" +
+        " [-r|--font-remove-embed]" +
+        " [-m|--font-map-name <from>=<to>]" +
+        " <pptx-file>"
     const opts = yargs()
         .parserConfiguration({
             "set-placeholder-key": true,
             "halt-at-non-option":  true
         })
-        .usage(
-            "Usage: pptx-surgeon" +
-            " [-v|--verbose <level>]" +
-            " [-k|--keep-temporary]" +
-            " [-o|--output <pptx-file>]" +
-            " [-d|--font-dump-info]" +
-            " [-r|--font-remove-embed]" +
-            " [-m|--font-map-name <from>=<to>]" +
-            " <pptx-file>"
-        )
+        .usage(usage)
         .option("v", {
             alias:    "verbose",
             type:     "number",
@@ -85,6 +85,7 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
             default:  false
         })
         .option("m", {
+            array:    true,
             alias:    "font-map-name",
             type:     "string",
             describe: "map font names",
@@ -95,8 +96,11 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
         .help(true)
         .showHelpOnFail(true)
         .strict(true)
-        .demand(1)
         .parse(process.argv.slice(2))
+    if (opts._.length !== 1) {
+        process.stderr.write(`${usage}\n`)
+        process.exit(1)
+    }
     const pptxfile = opts._[0]
     const pptxfileOut = opts.output !== "" ? opts.output : pptxfile
 
