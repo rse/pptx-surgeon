@@ -32,10 +32,7 @@
         "eslint-plugin-node":     "11.0.0",
         "npm-run-all":            "4.1.5",
         "pkg":                    "4.4.2",
-        "shx":                    "0.3.2",
-        "remark-cli":             "7.0.1",
-        "remark":                 "11.0.2",
-        "remark-man":             "6.0.0"
+        "shx":                    "0.3.2"
     },
     "dependencies" : {
         "yargs":                  "15.1.0",
@@ -56,8 +53,8 @@
     },
     "scripts": {
         "prepublishOnly":         "npm-run-all -s lint",
-        "build":                  "npm-run-all -s lint generate:man package",
-        "clean":                  "npm-run-all -s package:clean generate:clean",
+        "build":                  "npm-run-all -s lint package",
+        "clean":                  "npm-run-all -s package:clean",
         "lint":                   "eslint --config eslint.yaml pptx-surgeon*.js",
         "package":                "npm-run-all -s package:gen package:mv:lnx package:mv:win package:mv:mac",
         "package:gen":            "pkg -t node12-linux-x64,node12-win-x64,node12-macos-x64 .",
@@ -65,8 +62,6 @@
         "package:mv:win":         "shx mv pptx-surgeon-win.exe pptx-surgeon-win-x64.exe",
         "package:mv:mac":         "shx mv pptx-surgeon-macos   pptx-surgeon-mac-x64",
         "package:clean":          "rm -f pptx-surgeon-lnx-x64 pptx-surgeon-win-x64.exe pptx-surgeon-mac-x64",
-        "generate:man":           "remark --quiet --use remark-man --output pptx-surgeon.1 pptx-surgeon.md",
-        "generate:clean":         "rm -f pptx-surgeon.1",
         "test":                   "node pptx-surgeon.js -v2 -r -m 'msg CI Text=Arial' -o sample-patched.pptx sample.pptx"
     }
 }
