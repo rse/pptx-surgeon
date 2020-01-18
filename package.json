@@ -57,7 +57,7 @@
         "prepublishOnly":         "npm-run-all -s lint",
         "build":                  "npm-run-all -s lint generate:man package",
         "clean":                  "npm-run-all -s package:clean generate:clean",
-        "lint":                   "eslint --config eslint.yaml pptx-surgeon.js",
+        "lint":                   "eslint --config eslint.yaml pptx-surgeon*.js",
         "package":                "npm-run-all -s package:gen package:mv:lnx package:mv:win package:mv:mac",
         "package:gen":            "pkg -t node12-linux-x64,node12-win-x64,node12-macos-x64 .",
         "package:mv:lnx":         "shx mv pptx-surgeon-linux   pptx-surgeon-lnx-x64",

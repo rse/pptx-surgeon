@@ -23,28 +23,22 @@
 **  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-/*  own package information  */
-const my          = require("./package.json")
-
-/*  internal requirements  */
-const path        = require("path")
-const fs          = require("fs").promises
-
 /*  external requirements  */
 const yargs       = require("yargs")
 const chalk       = require("chalk")
 const stripAnsi   = require("strip-ansi")
-const JSZip       = require("jszip")
-const Tmp         = require("tmp")
-const mkdirp      = require("mkdirp")
-const slimdom     = require("slimdom")
-const slimdomSAX  = require("slimdom-sax-parser")
-const fontoxpath  = require("fontoxpath")
+
+/*  own package information  */
+const my          = require("./package.json")
+const XML         = require("./pptx-surgeon-1-xml")
+const PPTX        = require("./pptx-surgeon-2-pptx")
+const FontEmbed   = require("./pptx-surgeon-3-fontembed")
+const FontRefs    = require("./pptx-surgeon-4-fontrefs")
 
 ;(async () => {
     /* eslint indent: off */
 
-    /*  parsing command-line options  */
+    /*  parse command-line options  */
     const opts = yargs()
         .parserConfiguration({
             "set-placeholder-key": true,
@@ -60,10 +54,6 @@ const fontoxpath  = require("fontoxpath")
         .showHelpOnFail(true)
         .strict(true)
         .parse(process.argv.slice(2))
-    if (opts.fontMapName === null)
-        opts.fontMapName = []
-    else if (typeof opts.fontMapName === "string")
-        opts.fontMapName = [ opts.fontMapName ]
     if (opts._.length !== 1)
         throw new Error("PPTX file argument missing")
     const pptxfile = opts._[0]
@@ -79,318 +69,54 @@ const fontoxpath  = require("fontoxpath")
         }
     }
 
-    /*  create temporary filesystem area  */
-    const tmp = Tmp.dirSync()
-    const tmpdir = opts.keep ? pptxfile + ".d" : tmp.name
-    log(1, `creating temporary directory ${chalk.blue(tmpdir)}`)
+    /*  create XML manipulation facility  */
+    const xml = new XML({ log })
 
-    /*
-     *  ==== Save PPTX ====
-     */
-
-    /*  read PPTX file (which actually is just the unpacking of a ZIP format file)  */
-    log(1, "unpacking PPTX content")
-    let data = await fs.readFile(pptxfile, { encoding: null })
-    log(1, `read PPTX file ${chalk.blue(pptxfile)}: ${data.length} bytes`)
-    const zip = new JSZip()
-    log(1, `parsing PPTX file ${chalk.blue(pptxfile)}`)
-    const contents = await zip.loadAsync(data)
-    let manifest = []
-    for (const filename of Object.keys(contents.files)) {
-        const file = zip.file(filename)
-        const content = await file.async("nodebuffer")
-        const filepath = `${tmpdir}/${filename}`
-        const filedir = path.dirname(filepath)
-        await mkdirp.sync(filedir, { mode: 0o755 })
-        await fs.writeFile(`${tmpdir}/${filename}`, content, { encoding: null })
-        manifest.push(filename)
-        log(2, `extracted PPTX part ${chalk.blue(filename)}: ${content.length} bytes`)
-    }
-
-    /*
-     *  ==== Helper Functions for PPTX Management ====
-     */
-
-    /*  helper functions for XML manipulation  */
-    const xmlLoad = async (filename) => {
-        const xml = await fs.readFile(filename, { encoding: "utf8" })
-        log(2, `loading PPTX part ${chalk.blue(filename)}: ${xml.length} bytes`)
-        const dom = slimdomSAX.sync(xml, { position: false })
-        let m
-        if ((m = xml.match(/^(<\?xml.+?\?>\r?\n)/)) !== null)
-            dom.PI = m[1]
-        return dom
-    }
-    const xmlQuery = (dom, query, options = {}) => {
-        options = Object.assign({}, { single: false, type: "nodes" }, options)
-        let result
-        if (options.type === "nodes")
-            result = fontoxpath.evaluateXPathToNodes(query, dom)
-        else if (options.type === "string")
-            result = fontoxpath.evaluateXPathToStrings(query, dom)
-        else if (options.type === "number")
-            result = fontoxpath.evaluateXPathToNumbers(query, dom)
-        if (options.single) {
-            if (result.length === 0)
-                result = undefined
-            else if (result.length === 1)
-                result = result[0]
-            else
-                throw new Error("requested single result, but multiple nodes found")
-        }
-        return result
-    }
-    const xmlEdit = async (dom, expr, options = {}) => {
-        const result = await fontoxpath.evaluateUpdatingExpression(expr, dom)
-        fontoxpath.executePendingUpdateList(result.pendingUpdateList)
-    }
-    const xmlSave = async (dom, filename) => {
-        let xml = slimdom.serializeToWellFormedString(dom)
-        if (!xml.match(/^<\?xml.+?\?>/) && dom.PI)
-            xml = dom.PI + xml
-        log(2, `saving PPTX part ${chalk.blue(filename)}: ${xml.length} bytes`)
-        await fs.writeFile(filename, xml, { encoding: "utf8" })
-    }
-
-    /*  helper function for determining files of OpenXML  */
-    const partsOfType = async (type, single = false) => {
-        const xml = await xmlLoad(`${tmpdir}/[Content_Types].xml`)
-        let result = xmlQuery(xml, `
-            // Override [
-                @ContentType = 'application/vnd.openxmlformats-officedocument.${type}+xml'
-            ] / @PartName
-        `, { single, type: "string" })
-        if ((single && result === undefined) || (!single && result.length === 0))
-            throw new Error(`no part found for type "${type}"`)
-        if (typeof result === "string")
-            result = result.replace(/^\//, "")
-        else
-            result = result.map((f) => f.replace(/^\//, ""))
-        return result
-    }
-
-    /*
-     *  ==== Display Font Information ====
-     */
-
-    /*  load presentation main XML  */
-    const mainxml = await partsOfType("presentationml.presentation.main", true)
-    let xml = await xmlLoad(`${tmpdir}/${mainxml}`)
-    const ettf = xmlQuery(xml, "/ p:presentation / @embedTrueTypeFonts", { single: true, type: "string" })
-    if (ettf)
-        log(1, `PPTX: global flag: embedTrueTypeFonts="${ettf}"`)
-    const efs = xmlQuery(xml, "// p:embeddedFontLst / p:embeddedFont")
-    for (const ef of efs) {
-        const tf = xmlQuery(ef, ". / p:font / @typeface", { single: true, type: "string" })
-        if (tf) {
-            const styleNames = [ "regular", "bold", "italic", "boldItalic" ]
-            for (const styleName of styleNames) {
-                const id = xmlQuery(ef, `. / p:${styleName} / @r:id`, { single: true, type: "string" })
-                if (id)
-                    log(1, `PPTX: embedded font: typeface=${tf}, style=${styleName}, id=${id}`)
-            }
-        }
-    }
-
-    /*  load relationships XML  */
-    const rel = mainxml.replace(/^(.*\/)([^/]+)$/, "$1_rels/$2.rels")
-    xml = await xmlLoad(`${tmpdir}/${rel}`)
-    const rels = xmlQuery(xml, `
-        / Relationships
-        / Relationship [
-            @Type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/font"
-        ]
-    `)
-    for (const rel of rels) {
-        const id     = xmlQuery(rel, ". / @Id",     { single: true, type: "string" })
-        const target = xmlQuery(rel, ". / @Target", { single: true, type: "string" })
-        log(1, `PPTX: font relationship: id=${id}, target=${target}`)
-    }
-
-    /*  load document property XML  */
-    const prop = await partsOfType("extended-properties", true)
-    xml = await xmlLoad(`${tmpdir}/${prop}`)
-    const titles = xmlQuery(xml, `
-        / Properties
-        / TitlesOfParts
-        / vt:vector
-        / vt:lpstr
-    `, { type: "string" })
-    for (const title of titles)
-        log(1, `PPTX: document property part: title=${title}`)
-
-    /*  load theme XML  */
-    const themes = await partsOfType("theme")
-    const T = {}
-    for (const theme of themes) {
-        const xml = await xmlLoad(`${tmpdir}/${theme}`)
-        const combis = [
-            { id: "+mj-lt", section: "a:majorFont", type: "a:latin" },
-            { id: "+mj-ea", section: "a:majorFont", type: "a:ea" },
-            { id: "+mj-cs", section: "a:majorFont", type: "a:cs" },
-            { id: "+mn-lt", section: "a:minorFont", type: "a:latin" },
-            { id: "+mn-ea", section: "a:minorFont", type: "a:ea" },
-            { id: "+mn-cs", section: "a:minorFont", type: "a:cs" }
-        ]
-        for (const combi of combis) {
-            const tf = xmlQuery(xml, `// a:fontScheme / ${combi.section} / ${combi.type} / @typeface`,
-                { single: true, type: "string" })
-            if (tf !== undefined)
-                T[combi.id] = tf
-        }
-    }
-    Object.keys(T)
-        .sort((a, b) => a.localeCompare(b))
-        .map((font) => `${font}=${T[font]}`)
-        .forEach((entry) => {
-        log(1, `PPTX: theme font mapping: ${entry}`)
+    /*  load PPTX file  */
+    const pptx = new PPTX({
+        log,
+        xml,
+        basedir: opts.keep ? `${pptxfile}.d` : null,
+        keep:    opts.keep,
+        tool:    `pptx-surgeon/${my.version}`
     })
+    await pptx.load(pptxfile)
 
-    /*  load slide master and slide XMLs  */
-    const types = [ "slideMaster", "slide" ]
-    for (const type of types) {
-        const idx = {}
-        const slides = await partsOfType(`presentationml.${type}`)
-        for (const slide of slides) {
-            xml = await xmlLoad(`${tmpdir}/${slide}`)
-            const tfs = xmlQuery(xml, "// * [ @typeface ] / @typeface", { type: "string" })
-            for (const tf of tfs) {
-                if (idx[tf] === undefined)
-                    idx[tf] = 0
-                idx[tf]++
-            }
-        }
-        Object.keys(idx)
-            .sort((a, b) => a.localeCompare(b))
-            .map((font) => `${font}=${idx[font]}`)
-            .forEach((entry) => {
-            log(1, `PPTX: ${type} font usage: ${entry}`)
-        })
-    }
+    /*  display font embedding information  */
+    const fontembed = new FontEmbed({ log, xml, pptx })
+    await fontembed.read()
 
-    /*
-     *  ==== Optionally Remove Font Embedding Information ====
-     */
+    /*  display font references  */
+    const fontrefs = new FontRefs({ log, xml, pptx })
+    await fontrefs.read()
 
-    if (opts.fontRemoveEmbedding) {
-        log(1, "remove font embedding information")
-
-        /*  edit presentation main XML  */
-        const mainxml = await partsOfType("presentationml.presentation.main", true)
-        let xml = await xmlLoad(`${tmpdir}/${mainxml}`)
-        await xmlEdit(xml, "delete node / p:presentation / @embedTrueTypeFonts")
-        await xmlEdit(xml, "delete node // p:embeddedFontLst")
-        await xmlSave(xml, `${tmpdir}/${mainxml}`)
-
-        /*  edit relationships XML  */
-        const relfile = mainxml.replace(/^(.*\/)([^/]+)$/, "$1_rels/$2.rels")
-        xml = await xmlLoad(`${tmpdir}/${relfile}`)
-        const rels = xmlQuery(xml, `
-            / Relationships
-            / Relationship [
-                @Type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/font"
-            ]
-        `)
-        for (const rel of rels) {
-            await xmlEdit(rel, "delete node .")
-            let target = xmlQuery(rel, ". / @Target", { type: "string", single: true })
-            target = target.replace(/^\//, "")
-            const file = path.resolve(path.dirname(`${tmpdir}/${mainxml}`), target)
-            const base = path.resolve(tmpdir)
-            if (!(file.length >= base.length && file.substr(0, base.length) === base))
-                throw new Error("fatal error")
-            const part = file.substr(base.length).replace(/^\//, "")
-            log(2, `removing PPTX part ${chalk.blue(part)}`)
-            await fs.unlink(file)
-            manifest = manifest.filter((filename) => filename !== part)
-        }
-        await xmlSave(xml, `${tmpdir}/${relfile}`)
-    }
-
-    /*
-     *  ==== Optionally Map Font Name Information ====
-     */
+    /*  optionally remove font embeddings  */
+    if (opts.fontRemoveEmbedding)
+        await fontembed.delete()
 
     /*  optionally map font  */
-    if (opts.fontMapName.length > 0) {
-        log(1, "map font name information")
-
-        /*  prune theme XML files  */
-        const themes = await partsOfType("theme")
-        for (const theme of themes) {
-            const xml = await xmlLoad(`${tmpdir}/${theme}`)
-            const sections = [ "a:majorFont", "a:minorFont "]
-            const types = [ "a:latin", "a:ea", "a:cs", "a:font" ]
-            for (const section of sections) {
-                for (const type of types) {
-                    for (const fontmapname of opts.fontMapName) {
-                        const m = fontmapname.match(/^(.+)=(.+)$/)
-                        if (m == null)
-                            throw new Error("invalid font mapping syntax")
-                        const [ , valold, valnew ] = m
-                        const xquf = `
-                            for $n in // a:fontScheme / ${section} / ${type} [ @typeface = "${valold}" ]
-                            return replace value of node $n / @typeface with "${valnew}"
-                        `
-                        await xmlEdit(xml, xquf)
-                    }
-                }
-            }
-            await xmlSave(xml, `${tmpdir}/${theme}`)
+    if (opts.fontMapName !== null) {
+        let fontMapNames = opts.fontMapName
+        if (typeof fontMapNames === "string")
+            fontMapNames = [ fontMapNames ]
+        const mappings = []
+        for (const fontMapName of fontMapNames) {
+            const m = fontMapName.match(/^(.+)=(.+)$/)
+            if (m == null)
+                throw new Error("invalid font mapping syntax")
+            const [ , from, to ] = m
+            mappings.push({ from, to })
         }
-
-        /*  prune slide master and slide XML files  */
-        const types = [ "slideMaster", "slide" ]
-        for (const type of types) {
-            const slides = await partsOfType(`presentationml.${type}`)
-            for (const slide of slides) {
-                xml = await xmlLoad(`${tmpdir}/${slide}`)
-                for (const fontmapname of opts.fontMapName) {
-                    const m = fontmapname.match(/^(.+)=(.+)$/)
-                    if (m == null)
-                        throw new Error("invalid font mapping syntax")
-                    const [ , valold, valnew ] = m
-                    const xquf = `
-                        for $n in // * [ @typeface = "${valold}" ]
-                        return replace value of node $n / @typeface with "${valnew}"
-                    `
-                    await xmlEdit(xml, xquf)
-                }
-                await xmlSave(xml, `${tmpdir}/${slide}`)
-            }
-        }
+        await fontrefs.map(mappings)
     }
 
-    /*
-     *  ==== Save PPTX ====
-     */
-
-    /*  write PPTX file (which actually is just the packing of a ZIP format file)  */
-    log(1, "packing PPTX content")
-    const nzip = new JSZip()
-    for (const filename of manifest) {
-        const content = await fs.readFile(`${tmpdir}/${filename}`, { encoding: null })
-        log(2, `storing PPTX part ${chalk.blue(filename)}: ${content.length} bytes`)
-        nzip.file(filename, content, {
-            date:            zip.file(filename).date,
-            unixPermissions: zip.file(filename).unixPermissions,
-            comment:         zip.file(filename).comment,
-            createFolders:   false
-        })
+    /*  save PPTX file  */
+    if (opts.keep)
+        await pptx.save(`${pptxfile}.new`)
+    else {
+        await pptx.backup(pptxfile, `${pptxfile}.bak`)
+        await pptx.save(pptxfile)
     }
-    data = await nzip.generateAsync({
-        type:             "nodebuffer",
-        compression:      "DEFLATE",
-        compressionLevel: { level: 9 },
-        comment:          `pptx-surgeon/${my.version}`,
-        platform:         process.platform,
-        streamFiles:      false
-    })
-    log(1, `write PPTX file ${chalk.blue(pptxfile)}: ${data.length} bytes`)
-    await fs.writeFile(`${pptxfile}.new`, data, { encoding: null })
-
-    /*  delete temporary filesystem area  */
-    tmp.removeCallback()
 
     /*  gracefully terminate  */
     process.exit(0)
