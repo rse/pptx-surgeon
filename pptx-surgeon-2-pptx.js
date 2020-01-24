@@ -84,11 +84,9 @@ module.exports = class Archive {
                 @ContentType = 'application/vnd.openxmlformats-officedocument.${type}+xml'
             ] / @PartName
         `, { single, type: "string" })
-        if ((single && result === undefined) || (!single && result.length === 0))
-            throw new Error(`no part found for type "${type}"`)
         if (typeof result === "string")
             result = result.replace(/^\//, "")
-        else
+        else if (typeof result === "object" && result instanceof Array)
             result = result.map((f) => f.replace(/^\//, ""))
         return result
     }
