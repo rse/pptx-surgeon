@@ -40,13 +40,13 @@ Installation
 ------------
 
 - download pre-built binary for Windows (x64):<br/>
-  https://github.com/rse/pptx-surgeon/releases/download/0.9.5/pptx-surgeon-win-x64.exe
+  https://github.com/rse/pptx-surgeon/releases/download/0.9.6/pptx-surgeon-win-x64.exe
 
 - download pre-built binary for macOS (x64):<br/>
-  https://github.com/rse/pptx-surgeon/releases/download/0.9.5/pptx-surgeon-mac-x64
+  https://github.com/rse/pptx-surgeon/releases/download/0.9.6/pptx-surgeon-mac-x64
 
 - download pre-built binary for GNU/Linux (x64):<br/>
-  https://github.com/rse/pptx-surgeon/releases/download/0.9.5/pptx-surgeon-lnx-x64
+  https://github.com/rse/pptx-surgeon/releases/download/0.9.6/pptx-surgeon-lnx-x64
 
 - via Node.js/NPM for any platform:<br/>
   `$ npm install -g pptx-surgeon`
