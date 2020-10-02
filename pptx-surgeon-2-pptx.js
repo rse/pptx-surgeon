@@ -28,6 +28,7 @@ const chalk  = require("chalk")
 const JSZip  = require("jszip")
 const Tmp    = require("tmp")
 const mkdirp = require("mkdirp")
+const rimraf = require("rimraf")
 
 module.exports = class Archive {
     /*  configuration options  */
@@ -148,7 +149,7 @@ module.exports = class Archive {
 
         /*  delete temporary filesystem area  */
         if (this.tmp !== null && !this.options.keep) {
-            this.tmp.removeCallback()
+            rimraf.sync(this.basedir, { disableGlob: true })
             this.tmp = null
         }
     }
