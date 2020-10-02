@@ -151,7 +151,7 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
     /*  optionally map font  */
     if (opts.fontMapName.length > 0) {
         const mappings = []
-        for (const fontMapName of opts.fontMapNames) {
+        for (const fontMapName of opts.fontMapName) {
             const m = fontMapName.match(/^(.+)=(.+)$/)
             if (m == null)
                 throw new Error("invalid font mapping syntax")
