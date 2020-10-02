@@ -77,11 +77,11 @@ $ pptx-surgeon -d sample.pptx
 $ pptx-surgeon -r -o sample-patched.pptx sample.pptx
 
 # patch PPTX by mapping font names
-$ pptx-surgeon -m "Arial=msg CI Text" -o sample-patched.pptx sample.pptx
+$ pptx-surgeon -m "Arial=msg Text" -o sample-patched.pptx sample.pptx
 
 # patch PPTX by performing an all-in-one cleanup
 # (the listed fonts are all kept and everything else is mapped to "msg CI Text")
-$ pptx-surgeon -c "msg CI Text,msg CI Signal,msg CS Code,msg CS Note,Wingdings,Symbol" \
+$ pptx-surgeon -c "msg Text,msg Edge,msg Head,msg Node,msg Code,msg Deco,Wingdings,Symbol" \
   -o sample-patched.pptx sample.pptx
 ```
 
