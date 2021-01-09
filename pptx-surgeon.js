@@ -133,13 +133,13 @@ const FontRefs    = require("./pptx-surgeon-4-fontrefs")
     const fontembed = new FontEmbed({ log, xml, pptx })
     const info1 = await fontembed.read()
     if (opts.fontDumpInfo)
-        process.stdout.write(jsYAML.safeDump(info1, {}))
+        process.stdout.write(jsYAML.dump(info1, {}))
 
     /*  display font references  */
     const fontrefs = new FontRefs({ log, xml, pptx })
     const info2 = await fontrefs.read()
     if (opts.fontDumpInfo)
-        process.stdout.write(jsYAML.safeDump(info2, {}))
+        process.stdout.write(jsYAML.dump(info2, {}))
 
     /*  optionally remove font embeddings  */
     let modified = false
