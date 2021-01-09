@@ -88,7 +88,7 @@ $ pptx-surgeon -c "msg Text,msg Edge,msg Head,msg Node,msg Code,msg Deco,Wingdin
 License
 -------
 
-Copyright &copy; 2020 Dr. Ralf S. Engelschall (http://engelschall.com/)
+Copyright &copy; 2020-2021 Dr. Ralf S. Engelschall (http://engelschall.com/)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
